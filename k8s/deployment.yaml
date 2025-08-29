@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wagtail-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wagtail
+  template:
+    metadata:
+      labels:
+        app: wagtail
+    spec:
+      containers:
+      - name: wagtail
+        image: <AWS_ECR_REPO_URI>:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: postgres://wagtail:wagtailpassword@wagtail-db:5432/wagtail
+      imagePullSecrets:
+      - name: regcred

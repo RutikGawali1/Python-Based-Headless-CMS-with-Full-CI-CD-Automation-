@@ -1,0 +1,21 @@
+services:
+  web:
+    build: 
+    context:
+    ports: 
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=mysite.settings
+      - DATABASE_URL=postgres://wagtail:wagtailpassword@db:5432/wagtail
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: wagtail
+      POSTGRES_USER: wagtail
+      POSTGRES_PASSWORD: wagtailpassword
+    ports:
+      - "5432:5432"

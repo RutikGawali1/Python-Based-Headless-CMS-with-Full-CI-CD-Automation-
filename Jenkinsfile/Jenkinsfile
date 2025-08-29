@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REPO  = '<AWS_ECR_REPO_URI>'
+        TERRAFORM_DIR = 'terraform'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: '<YOUR_GIT_REPO_URL>'
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    sh "cd ${TERRAFORM_DIR} && terraform init"
+                    sh "cd ${TERRAFORM_DIR} && terraform apply -auto-approve"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t wagtail-app .'
+            }
+        }
+
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    sh '''
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REPO
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                sh 'docker tag wagtail-app:latest $ECR_REPO:latest'
+                sh 'docker push $ECR_REPO:latest'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh 'kubectl apply -f k8s/'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl get pods'
+                sh 'kubectl get services'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Full Pipeline Completed Successfully!'
+        }
+        failure {
+            echo '❌ Pipeline Failed. Check Jenkins Logs!'
+        }
+    }
+}
