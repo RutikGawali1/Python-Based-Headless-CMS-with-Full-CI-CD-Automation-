@@ -16,6 +16,7 @@ provider "aws" {
 data "aws_vpc" "default" {
   default = true
 }
+
 data "aws_subnets" "default" {
   filter {
     name   = "vpc-id"
@@ -39,15 +40,17 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = data.aws_iam_policy_document.assume_ec2.json
 }
 
-# Inline policy: ECR full, S3 basic (adjust as needed)
 data "aws_iam_policy_document" "ec2_policy" {
   statement {
     actions = [
-      "ecr:*",
-      "cloudwatch:*",
-      "logs:*",
-      "ec2:Describe*",
-      "s3:ListAllMyBuckets",
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:PutImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
       "s3:ListBucket",
       "s3:GetObject",
       "s3:PutObject"
@@ -71,10 +74,10 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 }
 
-# --- Security Group (22 SSH, 8080 Jenkins, 30080 app) ---
+# --- Security Group (SSH + HTTP only) ---
 resource "aws_security_group" "sg" {
   name        = "${var.project_name}-sg"
-  description = "Allow SSH, Jenkins and NodePort"
+  description = "Allow SSH and HTTP"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -84,20 +87,15 @@ resource "aws_security_group" "sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   ingress {
-    description = "Jenkins"
-    from_port   = 8080
-    to_port     = 8080
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  ingress {
-    description = "App NodePort"
-    from_port   = 30080
-    to_port     = 30080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+
   egress {
     description = "All outbound"
     from_port   = 0
@@ -107,23 +105,23 @@ resource "aws_security_group" "sg" {
   }
 }
 
-# --- ECR repo for your image ---
+# --- ECR repo ---
 resource "aws_ecr_repository" "repo" {
   name = "${var.project_name}-app"
   image_tag_mutability = "MUTABLE"
   image_scanning_configuration { scan_on_push = true }
 }
 
-# --- S3 bucket (media later if needed) ---
-resource "aws_s3_bucket" "media" {
-  bucket = "${var.project_name}-media-${random_id.rand.hex}"
-}
-
+# --- S3 bucket ---
 resource "random_id" "rand" {
   byte_length = 4
 }
 
-# --- EC2 instance (t2.micro free-tier) ---
+resource "aws_s3_bucket" "media" {
+  bucket = "${var.project_name}-media-${random_id.rand.hex}"
+}
+
+# --- EC2 instance ---
 data "aws_ami" "amzn2" {
   most_recent = true
   owners      = ["amazon"]
@@ -133,22 +131,20 @@ data "aws_ami" "amzn2" {
   }
 }
 
-resource "aws_instance" "ci_host" {
-  ami                    = data.aws_ami.amzn2.id
-  instance_type          = "t2.micro"
-  key_name               = var.key_name
-  subnet_id              = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids = [aws_security_group.sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+resource "aws_instance" "app_host" {
+  ami                         = data.aws_ami.amzn2.id
+  instance_type               = "t2.micro"
+  key_name                    = var.key_name
+  subnet_id                   = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids      = [aws_security_group.sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
 
-  tags = { Name = "${var.project_name}-ci-host" }
+  tags = { Name = "${var.project_name}-ec2" }
 
   user_data = <<-EOF
     #!/bin/bash
     set -eux
-
-    # Update
     yum update -y
 
     # Install Docker
@@ -163,22 +159,6 @@ resource "aws_instance" "ci_host" {
     unzip -q awscliv2.zip
     ./aws/install
 
-    # Install k3s (single-node Kubernetes)
-    curl -sfL https://get.k3s.io | sh -
-    # k3s installs kubectl as /usr/local/bin/kubectl and kubeconfig at /etc/rancher/k3s/k3s.yaml
-    chmod 644 /etc/rancher/k3s/k3s.yaml
-
-    # Install Jenkins (LTS)
-    wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
-    rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
-    yum install -y java-17-amazon-corretto-headless jenkins git
-    systemctl enable jenkins
-    systemctl start jenkins
-
-    # Allow jenkins user to run docker & kubectl
-    usermod -aG docker jenkins
-
-    # Print where to find Jenkins initial admin password on login
-    echo "Jenkins password in: /var/lib/jenkins/secrets/initialAdminPassword" > /root/INFO.txt
+    echo "Setup complete" > /home/ec2-user/SETUP_DONE.txt
   EOF
 }
