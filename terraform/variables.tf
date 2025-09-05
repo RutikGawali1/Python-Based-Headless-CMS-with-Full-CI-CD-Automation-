@@ -1,16 +1,16 @@
 variable "region" {
-  description = "AWS region"
+  description = "AWS region to deploy resources"
   type        = string
   default     = "us-east-1"
 }
 
-variable "key_name" {
-  description = "Existing EC2 key pair name to SSH"
-  type        = string
-}
-
 variable "project_name" {
-  description = "Name prefix for resources"
+  description = "Name prefix for all resources"
   type        = string
   default     = "wagtail-free"
+}
+
+variable "key_name" {
+  description = "EC2 key pair name for SSH"
+  type        = string
 }
