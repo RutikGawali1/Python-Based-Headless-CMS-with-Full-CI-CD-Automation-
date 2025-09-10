@@ -1,26 +1,30 @@
+# Base image
 FROM python:3.11-slim
 
+# Set work directory and Python path
 WORKDIR /app
+ENV PYTHONPATH=/app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
+# Copy requirements first (better cache)
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files into container
+# Copy project files
 COPY . .
 
-# Collect static files (ignore errors if none exist yet)
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Collect static files
 RUN python manage.py collectstatic --noinput || true
 
+# Expose port
 EXPOSE 8000
 
-# Start Gunicorn server for Django/Wagtail
-CMD ["gunicorn", "mysite.wsgi:application", "--bind", "0.0.0.0:8000"]
-
-
+# Run gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "mysite.wsgi:application"]
