@@ -1,16 +1,14 @@
-version: "3.9"
-
 services:
   web:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers=2
+    command: gunicorn cms_project.wsgi:application --bind 0.0.0.0:8000 --workers=2
     ports:
       - "8000:8000"
     environment:
       - DEBUG=1
-      - DJANGO_SETTINGS_MODULE=mysite.settings
+      - DJANGO_SETTINGS_MODULE=cms_project.settings
       - DATABASE_URL=postgres://wagtail:wagtailpassword@db:5432/wagtail
     volumes:
       - .:/app

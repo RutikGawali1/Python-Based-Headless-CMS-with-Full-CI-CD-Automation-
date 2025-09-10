@@ -2,18 +2,23 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# system deps
-RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# install python deps
-COPY app/requirements.txt .
+# Copy and install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copy app
-COPY app/ .
+# Copy project files into container
+COPY . .
 
-# collect static (ignore if no static yet)
+# Collect static files (ignore errors if none exist yet)
 RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 8000
-CMD ["gunicorn", "mysite.wsgi:application", "--bind", "0.0.0.0:8000", "--workers=2"]
+
+# Start Gunicorn server for Django/Wagtail
+CMD ["gunicorn", "cms_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers=2"]
