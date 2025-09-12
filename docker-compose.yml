@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     command: >
-      sh -c "pip install -r requirements.txt &&
+      sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn cms_project.wsgi:application --bind 0.0.0.0:8000 --workers=2"
     ports:
@@ -17,7 +17,7 @@ services:
       - DATABASE_URL=postgres://wagtail:wagtailpassword@db:5432/wagtail
       - PYTHONPATH=/app
     volumes:
-      - ./cms_project:/app
+      - .:/app
     depends_on:
       - db
 
