@@ -15,9 +15,9 @@ services:
       - DEBUG=1
       - DJANGO_SETTINGS_MODULE=cms_project.settings
       - DATABASE_URL=postgres://wagtail:wagtailpassword@db:5432/wagtail
-      - PYTHONPATH=/app # Add this line for good measure
+      - PYTHONPATH=/app
     volumes:
-      - ./cms_project:/app  # Correct volume mapping
+      - ./cms_project:/app
     depends_on:
       - db
 
