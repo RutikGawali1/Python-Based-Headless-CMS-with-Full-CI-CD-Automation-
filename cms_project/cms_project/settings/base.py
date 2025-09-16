@@ -87,14 +87,12 @@ WSGI_APPLICATION = "cms_project.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "wagtail_db",
-        "USER": "wagtail_user",
-        "PASSWORD": "wagtail_pass",
-        "HOST": "db",  # must match docker-compose service name
-        "PORT": 5432,
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
     }
 }
+
+
 
 
 
@@ -184,3 +182,4 @@ WAGTAILADMIN_BASE_URL = "http://example.com"
 # if untrusted users are allowed to upload files -
 # see https://docs.wagtail.org/en/stable/advanced_topics/deploying.html#user-uploaded-files
 WAGTAILDOCS_EXTENSIONS = ['csv', 'docx', 'key', 'odt', 'pdf', 'pptx', 'rtf', 'txt', 'xlsx', 'zip']
+
