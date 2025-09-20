@@ -1,26 +1,24 @@
-# Base image
+# Use official Python image
 FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Copy requirements (if you have requirements.txt, place it in this folder)
-COPY requirements.txt .
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
-COPY . .
+COPY . /app/
 
-# Collect static files (ignore if fails during first build)
-RUN python manage.py collectstatic --noinput || true
+# Expose port 80
+EXPOSE 80
 
-# Expose port
-EXPOSE 8000
-
-# Run Wagtail via Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "mysite.wsgi:application"]
+# Start Django/Wagtail with Gunicorn
+CMD ["gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:80", "--workers", "3"]
