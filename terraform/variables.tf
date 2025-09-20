@@ -13,5 +13,6 @@ variable "project_name" {
 variable "key_name" {
   description = "EC2 key pair name for SSH"
   type        = string
-  default     = "E9DIGlnxbpi9o+fxl2RdA/mX0oxg5G+ekVNFg3wW"
+  default     = "wagtail-key"
 }
+
