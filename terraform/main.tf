@@ -159,6 +159,19 @@ resource "aws_instance" "app_host" {
     unzip -q awscliv2.zip
     ./aws/install
 
-    echo "Setup complete" > /home/ec2-user/SETUP_DONE.txt
+    # Login to ECR
+    REGION=${var.region}
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    REPO_NAME=${var.project_name}-app
+
+    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+    # Pull latest image (assuming 'latest' tag)
+    docker pull $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME:latest || true
+
+    # Run container on port 80
+    docker run -d -p 80:80 --name wagtail-app $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME:latest
+
+    echo "App deployed via Docker from ECR" > /home/ec2-user/DEPLOYED.txt
   EOF
 }
