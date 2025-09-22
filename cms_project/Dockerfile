@@ -21,4 +21,4 @@ COPY . /app/
 EXPOSE 80
 
 # Start Django/Wagtail with Gunicorn
-CMD ["gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:80", "--workers", "3"]
+CMD ["gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:80", "--workers", ""]
