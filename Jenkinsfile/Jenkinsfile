@@ -63,10 +63,10 @@ pipeline {
 
     post {
         success {
-            echo ''
+            echo '✅ Full Pipeline Completed Successfully!'
         }
         failure {
-            echo '❌ Pipeline Failed. Check Jenkins Logs!'
+            echo '❌'
         }
     }
 }
