@@ -49,7 +49,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s/'
+                sh 'kubectl apply  k8s/'
             }
         }
 
@@ -63,7 +63,7 @@ pipeline {
 
     post {
         success {
-            echo ''
+            echo '✅ Full Pipeline Completed Successfully!'
         }
         failure {
             echo '❌ Pipeline Failed. Check Jenkins Logs!'
